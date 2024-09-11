@@ -21,7 +21,7 @@ public class Settlement {
     private Long id; // 정산 고유 ID
 
     @Column(name = "partner_id")
-    private Integer partnerId; // 정산이 관련된 파트너 ID
+    private Long partnerId; // 정산이 관련된 파트너 ID
 
     @Column(name = "total_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal totalAmount; // 총 정산 금액
