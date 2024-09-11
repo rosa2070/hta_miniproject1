@@ -36,9 +36,13 @@ public class SettlementScheduledTasks {
         LocalDate yesterday = today.minusDays(1);
 
         // 전날의 결제 내역 조회
+        LocalTime startOfDay = LocalTime.MIN;
+        LocalTime endOfDay = LocalTime.MAX;
+
+        // 전날의 결제 내역 조회
         List<Payment> payments = paymentRepository.findByPaymentDateBetween(
-                LocalDateTime.of(yesterday, LocalTime.MIN),
-                LocalDateTime.of(yesterday, LocalTime.MAX)
+                LocalDateTime.of(yesterday, startOfDay),
+                LocalDateTime.of(yesterday, endOfDay)
         );
 
         // partner_id 별로 결제 금액 집계
@@ -57,13 +61,15 @@ public class SettlementScheduledTasks {
             BigDecimal totalAmount = entry.getValue();
 
             // 해당 partner_id와 날짜에 대한 정산 레코드 조회
-            Settlement existingSettlement = settlementRepository.findByPartnerIdAndPaymentDate(
-                    LocalTime.MIDNIGHT, // 날짜의 시작을 LocalTime으로 표현
-                    partnerId
+            List<Settlement> settlements = settlementRepository.findByPartnerIdAndPaymentDateBetween(
+                    partnerId,
+                    startOfDay,
+                    endOfDay
             );
 
-            if (existingSettlement != null) {
+            if (!settlements.isEmpty()) {
                 // 기존 정산 레코드 업데이트
+                Settlement existingSettlement = settlements.get(0); // Assume single record
                 existingSettlement.setTotalAmount(totalAmount);
                 existingSettlement.setUpdatedAt(LocalDateTime.now());
                 settlementRepository.save(existingSettlement);
@@ -73,9 +79,7 @@ public class SettlementScheduledTasks {
                 newSettlement.setPartnerId(partnerId);
                 newSettlement.setTotalAmount(totalAmount);
                 newSettlement.setStatus("pending");
-                newSettlement.setPaymentDate(LocalTime.MIDNIGHT); // LocalTime으로 설정
-                newSettlement.setCreatedAt(LocalDateTime.now());
-                newSettlement.setUpdatedAt(LocalDateTime.now());
+                newSettlement.setPaymentDate(LocalTime.MIDNIGHT); // paymentDate를 LocalTime으로 설정
                 settlementRepository.save(newSettlement);
             }
         }
